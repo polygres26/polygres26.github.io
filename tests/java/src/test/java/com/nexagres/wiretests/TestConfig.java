@@ -1,4 +1,4 @@
-package com.polygres.wiretests;
+package com.nexagres.wiretests;
 
 /**
  * Connection details for a PolyWire instance already running (via ../../docker-compose.test.yml,

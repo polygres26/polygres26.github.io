@@ -33,7 +33,7 @@ WORKDIR /app
 
 RUN groupadd --system polywire && useradd --system --gid polywire --home-dir /app polywire
 
-COPY --from=build /build/target/polygres-wire.jar /app/polygres-wire.jar
+COPY --from=build /build/target/nexagres-wire.jar /app/nexagres-wire.jar
 COPY --from=web-build /build/dist /app/web
 
 # POLYWIRE_ADMIN_WEB_DIR: tells MetricsServer to serve the built admin SPA copied in above via
@@ -75,4 +75,4 @@ ENTRYPOINT ["java", \
     "--add-opens=java.base/java.net=ALL-UNNAMED", \
     "--add-opens=java.sql/java.sql=ALL-UNNAMED", \
     "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED", \
-    "-jar", "/app/polygres-wire.jar"]
+    "-jar", "/app/nexagres-wire.jar"]

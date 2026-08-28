@@ -1,4 +1,4 @@
-package com.polygres.wiretests;
+package com.nexagres.wiretests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
