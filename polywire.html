@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Polywire — Full Capabilities of the Intelligent Postgres Gateway</title>
-<meta name="description" content="Polywire's full technical detail, organized by what it does — Connect, Protect, Control, Accelerate, Observe: outcomes, use cases, admin console, Polycache benchmarks per protocol, sharding, cross-shard JOINs, SQS, rollups, observability, multi-AZ deployment, security, planned/unplanned outages, and error translation.">
+<meta name="description" content="Polywire's full technical detail, organized by what it does — Connect, Protect, Control, Accelerate, Observe: outcomes, use cases, admin console, Polycache benchmarks per protocol, sharding, SQS, rollups, observability, multi-AZ deployment, security, planned/unplanned outages, and error translation.">
 <link rel="canonical" href="https://polygres26.github.io/polywire.html">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#3f5b9b">
@@ -62,7 +62,6 @@
           <li><a href="#admin-console-polywire">Admin console</a></li>
           <li><a href="#cache-vs-round-trip">Polycache vs. round trip</a></li>
           <li><a href="#sharding">Sharding</a></li>
-          <li><a href="#cross-shard-joins">Cross-shard JOINs</a></li>
           <li><a href="#sqs-enqueue-dequeue">SQS</a></li>
           <li><a href="#influxdb-line-protocol">InfluxDB</a></li>
           <li><a href="#graphdb-bolt-cypher">GraphDB (Neo4j Bolt+Cypher)</a></li>
@@ -118,7 +117,6 @@
         <li><span class="uc-body"><span class="uc-title">A single, secure gateway across multiple data sources</span><span class="uc-desc">One admin surface — SQL firewall, ACL, routing, QoS, live metrics — in front of traffic that used to be spread across five different databases' own tooling, each with its own access model.</span></span></li>
         <li><span class="uc-body"><span class="uc-title">Connection pooling for Postgres</span><span class="uc-desc">Every backend is fronted by a bounded connection pool — many client connections share a small, fixed set of real Postgres connections, the same problem PgBouncer solves, built into the same gateway that's already translating and firewalling the traffic.</span></span></li>
         <li><span class="uc-body"><span class="uc-title">Horizontal sharding, by real bound values</span><span class="uc-desc">Route by schema, predicate, or a real bound parameter value — decoded from each protocol's own wire format across Postgres, Oracle, SQL Server, and MySQL, not just SQL text — with genuine cross-shard merge (not concatenation) for aggregates, sorted/paginated hits, and DynamoDB/MongoDB/SQS/OpenSearch sharding alongside SQL. See "Sharding" below.</span></span></li>
-        <li><span class="uc-body"><span class="uc-title">Correct JOINs across shards or split-out backends</span><span class="uc-desc">A real Apache Calcite query engine plans and executes a JOIN spanning shards or functionally-separated backends — cost-based join ordering from live Postgres statistics, exact filter pushdown that cut real network traffic 90% in a live test — instead of scatter-gather's own broadcast-and-merge, which silently drops a matching row pair the moment it spans two shards. See "Cross-shard JOINs" below.</span></span></li>
         <li><span class="uc-body"><span class="uc-title">Distributed transactions (XA)</span><span class="uc-desc">Coordinate a transaction across multiple backend databases from a client that only knows how to talk to one, for the cases a single-database commit isn't enough.</span></span></li>
         <li><span class="uc-body"><span class="uc-title">Query result caching (Polycache)</span><span class="uc-desc">Polywire's embedded distributed cache, opt-in per table, serves repeat exact-key reads without a round trip to Postgres. Invalidation is automatic and table-level — any write against a cached table (whether it binds parameters or sends literal values, the invalidation match works either way) evicts every cached entry for that table — no application-side caching code to write or invalidate.</span></span></li>
         <li><span class="uc-body"><span class="uc-title">Pre-aggregated rollups for analytics queries</span><span class="uc-desc">Define a GROUP BY/aggregate summary once — Polywire keeps a real materialized table fresh on a schedule and rewrites matching client queries to read from it automatically, via a real SQL query planner, not a hand-maintained second copy your application has to know about.</span></span></li>
@@ -134,6 +132,10 @@
         <img src="docs/admin-polywire.png" alt="Polywire's admin console: a Metrics dashboard showing live protocol traffic across all nine protocols including gRPC and OpenSearch shown as their own distinct rows, reads/writes per second, top SQL by cost, per-tool MCP call counts and error rates, traffic by backend (routing/sharding target), and a cache-hit-vs-Postgres RTT breakdown covering every protocol including OpenSearch, with a sidebar grouped into four real labeled sections — Monitoring (Metrics, Topology), Security (SQL Firewall, ACL, OAuth), Traffic (Backends, Queues, Data Explorer, Router Rules — where shard/routing targets are configured, QoS), and Configuration (LLM)">
         <figcaption>Polywire ships its own admin app — live traffic metrics across every protocol (gRPC and MCP shown separately, not merged into one label), per-tool MCP call counts and error rates, cache-hit-vs-Postgres RTT for every protocol including OpenSearch, and a sidebar that groups controls the same way this page does: Security (SQL firewall, ACL, OAuth) as its own labeled section, Router Rules for sharding/routing targets under Traffic, deployment topology, backends, queues, and LLM configuration for dialect translation — all in one place, not scattered across each protocol's own tooling.</figcaption>
       </figure>
+      <p class="lede" style="margin-top:24px">
+        Prefer to click through it yourself? <a href="demo.html?product=wire" class="btn btn-primary">Open the interactive demo →</a>
+        No signup, no backend required — synthetic data, real layout.
+      </p>
 
       <h3 class="subhead" id="cache-vs-round-trip">Polycache hit vs. Postgres round trip, per protocol<a class="permalink" href="#cache-vs-round-trip" aria-label="Link to this section">#</a></h3>
       <p class="statTeaser">Up to <b>9.3× faster</b> repeat reads — built-in distributed caching reduces Postgres round trips across every protocol Polywire speaks.</p>
@@ -315,63 +317,6 @@
         the shard set doesn't migrate data, queues, or documents already placed under the old set.
         Consistent hashing minimizes what <i>would</i> need to move; nothing moves it
         automatically today.
-      </p>
-      </details>
-
-      <h3 class="subhead" id="cross-shard-joins">Cross-shard JOINs: planned and executed, not broadcast-and-merge<a class="permalink" href="#cross-shard-joins" aria-label="Link to this section">#</a></h3>
-      <p class="statTeaser">A JOIN across shards or split-out backends is planned and executed for real, via a genuine Apache Calcite query engine — not scatter-gather's broadcast-and-merge, which silently drops the matching row pair the moment it spans two shards.</p>
-      <details class="methodDetails">
-        <summary>See cross-shard JOIN detail →</summary>
-      <p class="rttNote">
-        Scatter-gather sharding (see "Sharding" above) works for aggregates and sorted/paginated
-        reads because it merges results centrally. A <code>JOIN</code> is a different problem:
-        broadcasting the identical SQL to every shard and concatenating the results is silently
-        wrong the instant a matching row pair spans two different shards — never found on either
-        shard alone, and no error raised. Polywire closes that gap with a real federated query
-        engine instead of extending the broadcast-and-merge shape to a case it can't handle
-        correctly.
-      </p>
-      <p class="rttNote">
-        <b>Real planning, both shapes.</b> A JOIN across the SAME logical table horizontally split
-        by row (e.g. <code>orders</code> spread across shards) is mounted as a real
-        <code>UNION ALL</code> across every shard's own copy; a JOIN across DIFFERENT tables that
-        live on entirely separate backends (functional/vertical sharding, e.g.
-        <code>orders_db.orders</code> on one backend and <code>customers_db.customers</code> on
-        another) mounts each backend as its own schema. Either way, predicates and columns are
-        pushed down into each shard/backend's own SQL by Calcite's real JDBC adapter rules — not a
-        row-pull-and-join-in-application-code.
-      </p>
-      <p class="rttNote">
-        <b>Cost-based join ordering from real statistics.</b> Every mounted table carries a real
-        row-count estimate — Postgres's own <code>pg_class.reltuples</code>, the same number
-        Postgres's own planner already uses, refreshed automatically in the background — so
-        Calcite's join-order decisions are informed by actual table sizes, not a blind guess.
-      </p>
-      <p class="rttNote">
-        <b>Exact filter pushdown, not a broadcast Bloom filter.</b> A literal Bloom filter can't
-        cross into a remote backend's own SQL — there's no portable "test membership in this
-        filter" predicate any of Postgres, MySQL, Oracle, or SQL Server support natively. Instead,
-        when a JOIN's smaller side is confidently identified from real statistics, its own real
-        distinct join-key values are collected first and pushed down as an exact
-        <code>col IN (...)</code> filter on the larger side — before that side's own query even
-        runs. In a live test joining a 10-row table against a 200,000-row table, the larger side's
-        real, MEASURED row count (not estimated) dropped from 200,000 to ~19,000 — a 90% reduction
-        in what crossed the wire, with an identical, correct result. Deliberately conservative: any
-        ambiguity (a self-join, ON-clause conditions that aren't a simple equality, missing
-        statistics for either side) skips the optimization outright — the JOIN still runs
-        correctly, just without the extra filter.
-      </p>
-      <p class="rttNote">
-        <b>Full visibility, not a black box.</b> Every federated query's real
-        <code>EXPLAIN PLAN FOR</code> plan, timing, row count, and success/failure is captured into
-        a real plan history — including a genuinely separate, MEASURED (not estimated) re-execution
-        of each shard/backend's own leaf query, with real per-leaf timing and row counts. All of it
-        is visible in Polywire's own admin console, per query, not just aggregated metrics.
-      </p>
-      <p class="rttNote">
-        <b>What this doesn't do:</b> a statement joining more than two shards/backends in one query
-        falls through to scatter-gather's own broadcast-and-merge behavior, unfiltered — a real,
-        disclosed boundary for now, not a silent gap.
       </p>
       </details>
 
