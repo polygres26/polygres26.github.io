@@ -1,4 +1,4 @@
-package com.nexagres.wiretests;
+package com.sayonora.wiretests;
 
 /**
  * Connection details for a Warp instance already running (via ../../docker-compose.test.yml,
