@@ -329,7 +329,7 @@
       <p class="rttNote">
         By default, orawire/mywire/mssqlwire all translate the client's SQL into Postgres dialect
         and run it against real Postgres — that's the whole point of the shared pipeline described
-        under "Architecture" above. Setting <code>WARP_ORACLE_BACKEND_MODE=native</code>,
+        under "Architecture" above. Setting <code>WARP_ORACLE_BACKEND_MODE=relay</code>,
         <code>WARP_MYWIRE_BACKEND=mysql</code>, or <code>WARP_MSSQLWIRE_BACKEND=sqlserver</code>
         switches that one protocol to the opposite mode instead: no translation at all, statements
         proxy straight through to a real Oracle, MySQL, or SQL Server backend of your own,
@@ -368,7 +368,7 @@
         has: it only sees writes that go through Warp, not ones made directly against the backend
         by another client. Sharding stays single-backend per native session — there's no
         multi-shard fan-out across several native Oracle/MySQL/SQL Server targets yet, the way
-        there is across several named Postgres backends. <code>WARP_ORACLE_BACKEND_MODE=native</code>
+        there is across several named Postgres backends. <code>WARP_ORACLE_BACKEND_MODE=relay</code>
         (orawire) and native-mode MCP are not yet wired into the shared pipeline this way — they
         still bypass it entirely for every statement, with only connection ACL (CIDR allow/deny,
         enforced at TCP accept time) and the connection pool itself applying, same as before. A
